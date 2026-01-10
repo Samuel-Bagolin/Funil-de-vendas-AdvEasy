@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdvEasy - Funil de Vendas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0d243c',
+                        accent: '#ad8609'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: #f8fafc;
+        }
+        
+        /* Custom styles */
+        .custom-shadow {
+            box-shadow: 0px 0px 30px rgba(13, 36, 60, 0.08);
+        }
+        
+        .tab-shadow {
+            box-shadow: 0px -4px 10px rgba(0, 0, 0, 0.03);
+        }
+        
+        .conversion-shadow {
+            box-shadow: 0px 20px 40px rgba(173, 134, 9, 0.15);
+        }
+        
+        .table-shadow {
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.03);
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            cursor: pointer;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+        }
+        
+        /* Smooth transitions */
+        .smooth-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulseSuccess {
+            0%, 100% { background-color: #10b981; }
+            50% { background-color: #059669; }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .animate-pulse-success {
+            animation: pulseSuccess 2s ease-in-out;
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-900">
+    <!-- Header -->
+    <header class="bg-primary border-b border-slate-800 px-6 py-5 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <img 
+                    src="https://adveasy.com.br/wp-content/uploads/2023/01/result-3.svg" 
+                    alt="AdvEasy Logo" 
+                    class="h-10 w-auto invert"
+                />
+                <div class="h-8 w-px bg-slate-700 hidden sm:block"></div>
+                <div class="hidden sm:block">
+                    <h1 class="text-white font-black text-lg tracking-tighter uppercase leading-none">Funil de Vendas</h1>
+                    <p class="text-[9px] text-slate-300 font-black uppercase tracking-[0.2em] mt-1.5">Inteligência Comercial AdvEasy</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col items-end">
+                <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Status da Rede</span>
+                <div class="flex items-center gap-2">
+                    <div id="connectionStatus" class="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                    <span id="connectionText" class="text-[10px] font-black text-white uppercase tracking-tighter">Conectado</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Online/Offline Indicator -->
+    <div id="offlineIndicator" class="bg-accent text-white text-[11px] font-black py-2 px-4 flex items-center justify-center gap-2 sticky top-[73px] z-40 uppercase tracking-widest hidden">
+        <i class="fas fa-wifi-slash text-xs"></i>
+        Modo Offline • Sincronização Automática
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 mt-8">
+        <!-- Tab Navigation -->
+        <div class="flex gap-2 overflow-x-auto pb-2">
+            <button id="tabForm" class="flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition bg-white text-primary tab-shadow border-x border-t border-slate-200 whitespace-nowrap">
+                <i class="fas fa-plus-circle text-sm"></i>
+                Lançamento
+            </button>
+            <button id="tabDatabase" class="flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition text-slate-400 hover:text-primary whitespace-nowrap">
+                <i class="fas fa-database text-sm"></i>
+                Base de Dados
+            </button>
+            <button id="tabDashboard" class="flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition text-slate-400 hover:text-primary whitespace-nowrap">
+                <i class="fas fa-chart-line text-sm"></i>
+                Dashboard
+            </button>
+        </div>
+
+        <!-- Form Content -->
+        <div id="formContent" class="bg-white p-6 sm:p-8 md:p-10 lg:p-12 rounded-b-[32px] rounded-tr-[32px] custom-shadow border border-slate-200">
+            <form id="mainForm" class="space-y-8 sm:space-y-10">
+                <!-- Perfil do Advogado -->
+                <section class="space-y-6 sm:space-y-8">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                            <i class="fas fa-user text-primary text-base"></i>
+                        </div>
+                        <h2 class="font-extrabold text-primary uppercase tracking-tighter text-lg">Perfil do Advogado</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Profissional</label>
+                            <input 
+                                id="nomeInput"
+                                type="text"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none smooth-transition font-semibold"
+                                placeholder="Nome Completo"
+                                required
+                            />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Documento (CPF/CNPJ)</label>
+                            <input 
+                                id="documentoInput"
+                                type="text"
+                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none smooth-transition font-mono font-bold"
+                                placeholder="000.000.000-00"
+                                required
+                            />
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Referência</label>
+                            <div class="relative">
+                                <input 
+                                    id="dataInput"
+                                    type="date"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none smooth-transition font-bold"
+                                    required
+                                />
+                                <i class="fas fa-calendar absolute right-4 sm:right-5 top-3.5 sm:top-4 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10">
+                    <!-- Dados Comerciais -->
+                    <section class="lg:col-span-7 space-y-6 sm:space-y-8">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                                <i class="fas fa-bullseye text-primary text-base"></i>
+                            </div>
+                            <h2 class="font-extrabold text-primary uppercase tracking-tighter text-lg">Dados Comerciais Diários</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <!-- Leads -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-bullseye text-primary text-xs sm:text-sm"></i>
+                                    <span class="truncate">Leads Recebidos</span>
+                                </label>
+                                <input 
+                                    id="leadsInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                            
+                            <!-- Primeiro Contato -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-comment text-primary text-xs sm:text-sm"></i>
+                                    <span class="truncate">Primeiro Contato</span>
+                                </label>
+                                <input 
+                                    id="mensagensInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                            
+                            <!-- Reuniões -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-users text-primary text-xs sm:text-sm"></i>
+                                    <span class="truncate">Reuniões Agendadas</span>
+                                </label>
+                                <input 
+                                    id="reunioesInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                            
+                            <!-- Propostas -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-file-contract text-primary text-xs sm:text-sm"></i>
+                                    <span class="truncate">Propostas Enviadas</span>
+                                </label>
+                                <input 
+                                    id="propostasInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                            
+                            <!-- Fechamentos -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-handshake text-primary text-xs sm:text-sm"></i>
+                                    <span class="truncate">Contratos Fechados</span>
+                                </label>
+                                <input 
+                                    id="fechamentosInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                            
+                            <!-- Perdidos -->
+                            <div class="space-y-2 sm:space-y-3">
+                                <label class="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                    <i class="fas fa-times-circle text-rose-500 text-xs sm:text-sm"></i>
+                                    <span class="truncate">Leads Desqualificados</span>
+                                </label>
+                                <input 
+                                    id="perdidosInput"
+                                    type="number"
+                                    min="0"
+                                    value="0"
+                                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-lg sm:text-xl md:text-2xl font-black text-slate-800 focus:border-primary focus:ring-1 focus:ring-primary outline-none smooth-transition"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Dashboard de Conversão -->
+                    <aside class="lg:col-span-5 space-y-6 sm:space-y-8">
+                        <section class="bg-primary p-6 sm:p-8 md:p-10 rounded-[32px] sm:rounded-[40px] conversion-shadow text-white relative overflow-hidden">
+                            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-4 sm:mb-6">Eficiência de Conversão</h3>
+                            <div class="flex items-baseline gap-3 mb-6 sm:mb-8 md:mb-12">
+                                <span id="overallConversion" class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter">0.0%</span>
+                                <span class="text-xs font-bold opacity-70 uppercase tracking-widest">C.G.I.</span>
+                            </div>
+                            
+                            <div id="conversionBars" class="space-y-3 sm:space-y-4 md:space-y-6">
+                                <!-- Conversion bars will be dynamically inserted here -->
+                            </div>
+                        </section>
+
+                        <button 
+                            id="saveButton"
+                            type="submit"
+                            class="w-full py-4 sm:py-5 md:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-sm flex items-center justify-center gap-3 sm:gap-4 smooth-transition transform active:scale-[0.97] shadow-xl bg-accent hover:bg-[#8c6e07] text-white"
+                        >
+                            <i class="fas fa-save text-sm sm:text-base"></i>
+                            <span id="saveButtonText">Salvar Dados Diários</span>
+                        </button>
+                    </aside>
+                </div>
+            </form>
+        </div>
+
+        <!-- Database Content (Initially Hidden) -->
+        <div id="databaseContent" class="hidden bg-white p-6 sm:p-8 md:p-10 lg:p-12 rounded-b-[32px] rounded-tr-[32px] custom-shadow border border-slate-200 min-h-[60vh]">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                        <i class="fas fa-database text-primary text-base"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-primary uppercase tracking-tighter text-lg">Histórico de Lançamentos</h2>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base consolidada de performance</p>
+                    </div>
+                </div>
+
+                <div class="relative w-full sm:w-80">
+                    <input 
+                        id="searchInput"
+                        type="text"
+                        placeholder="Buscar por nome, documento ou data..."
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-primary outline-none smooth-transition font-semibold"
+                    />
+                    <i class="fas fa-search absolute left-3 sm:left-4 top-2.5 sm:top-3.5 text-slate-400 text-sm"></i>
+                </div>
+            </div>
+
+            <div id="databaseTable" class="animate-fade-in">
+                <!-- Database content will be dynamically loaded here -->
+                <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <i class="fas fa-database text-4xl opacity-10"></i>
+                    <span class="text-sm font-black uppercase tracking-widest text-slate-400">Nenhum registro encontrado</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Content (Initially Hidden) -->
+        <div id="dashboardContent" class="hidden bg-white p-6 sm:p-8 md:p-10 lg:p-12 rounded-b-[32px] rounded-tr-[32px] custom-shadow border border-slate-200 min-h-[60vh]">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8 md:mb-10">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                        <i class="fas fa-chart-line text-primary text-base"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-extrabold text-primary uppercase tracking-tighter text-lg">Dashboard de Performance</h2>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Evolução e análise por advogado</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-64">
+                        <input 
+                            id="searchAdvogado"
+                            type="text"
+                            placeholder="Digite o nome ou CPF/CNPJ..."
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-primary outline-none smooth-transition font-semibold"
+                        />
+                        <i class="fas fa-user absolute left-3 top-2.5 sm:top-3 text-slate-400 text-sm"></i>
+                    </div>
+                    
+                    <div class="relative w-full sm:w-48">
+                        <select 
+                            id="selectMonth"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 sm:py-3 text-sm focus:ring-2 focus:ring-primary outline-none smooth-transition font-semibold appearance-none"
+                        >
+                            <option value="">Todos os meses</option>
+                            <!-- Months will be populated by JavaScript -->
+                        </select>
+                        <i class="fas fa-calendar absolute left-3 top-2.5 sm:top-3 text-slate-400 text-sm"></i>
+                    </div>
+                    
+                    <button 
+                        id="searchDashboardBtn"
+                        class="bg-accent hover:bg-[#8c6e07] text-white font-black uppercase tracking-wider text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl smooth-transition whitespace-nowrap"
+                    >
+                        <i class="fas fa-search mr-2"></i>Buscar
+                    </button>
+                </div>
+            </div>
+
+            <div id="dashboardStats" class="hidden mb-6 sm:mb-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                    <div class="bg-primary text-white p-4 sm:p-6 rounded-2xl">
+                        <div class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Total Leads</div>
+                        <div id="statLeads" class="text-xl sm:text-2xl font-black">0</div>
+                    </div>
+                    <div class="bg-primary text-white p-4 sm:p-6 rounded-2xl">
+                        <div class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Contratos Fechados</div>
+                        <div id="statFechamentos" class="text-xl sm:text-2xl font-black">0</div>
+                    </div>
+                    <div class="bg-accent text-white p-4 sm:p-6 rounded-2xl">
+                        <div class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Conversão Geral</div>
+                        <div id="statConversao" class="text-xl sm:text-2xl font-black">0%</div>
+                    </div>
+                    <div class="bg-slate-800 text-white p-4 sm:p-6 rounded-2xl">
+                        <div class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Média Diária</div>
+                        <div id="statMedia" class="text-xl sm:text-2xl font-black">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboardCharts" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                        <h3 class="font-black text-primary text-sm uppercase tracking-wider mb-4">Evolução de Leads e Contratos</h3>
+                        <canvas id="leadsChart" height="250"></canvas>
+                    </div>
+                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                        <h3 class="font-black text-primary text-sm uppercase tracking-wider mb-4">Taxas de Conversão por Etapa</h3>
+                        <canvas id="conversionChart" height="250"></canvas>
+                    </div>
+                </div>
+                
+                <div class="mt-6 sm:mt-8 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                    <h3 class="font-black text-primary text-sm uppercase tracking-wider mb-4">Performance Diária Detalhada</h3>
+                    <div id="detailedTable" class="overflow-x-auto">
+                        <!-- Detailed table will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="dashboardEmpty" class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                <i class="fas fa-chart-line text-4xl opacity-10"></i>
+                <span class="text-sm font-black uppercase tracking-widest text-slate-400">Busque por um advogado para ver sua evolução</span>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-12 sm:mt-24 py-8 sm:py-10 border-t border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-3 mb-2">
+           <img src="https://adveasy.com.br/wp-content/uploads/2023/01/result-3.svg" class="h-3 sm:h-4 grayscale opacity-40" alt="" />
+           <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">Commercial Intelligence Engine</span>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAM9jfK3qLStPI-EuUtd0XGOFNttCGyaI",
+            authDomain: "funil-de-vendas-adveasy.firebaseapp.com",
+            projectId: "funil-de-vendas-adveasy",
+            storageBucket: "funil-de-vendas-adveasy.firebasestorage.app",
+            messagingSenderId: "849583800622",
+            appId: "1:849583800622:web:969738e85a55edc3bc7abf",
+            measurementId: "G-PSHFN1TEQJ"
+        };
+
+        // Initialize Firebase
+        let db;
+        let isFirebaseInitialized = false;
+        let leadsChart = null;
+        let conversionChart = null;
+        
+        // Application State
+        const state = {
+            activeTab: 'form',
+            metrics: {
+                leads: 0,
+                mensagens: 0,
+                reunioes: 0,
+                propostas: 0,
+                fechamentos: 0,
+                perdidos: 0
+            },
+            allEntries: [],
+            searchTerm: '',
+            isOnline: navigator.onLine,
+            saving: false,
+            success: false,
+            loadingDb: false,
+            dashboardData: {
+                advogado: null,
+                entries: [],
+                filteredEntries: [],
+                selectedMonth: ''
+            }
+        };
+
+        // DOM Elements
+        const elements = {
+            // Tabs
+            tabForm: document.getElementById('tabForm'),
+            tabDatabase: document.getElementById('tabDatabase'),
+            tabDashboard: document.getElementById('tabDashboard'),
+            formContent: document.getElementById('formContent'),
+            databaseContent: document.getElementById('databaseContent'),
+            dashboardContent: document.getElementById('dashboardContent'),
+            
+            // Form inputs
+            nomeInput: document.getElementById('nomeInput'),
+            documentoInput: document.getElementById('documentoInput'),
+            dataInput: document.getElementById('dataInput'),
+            leadsInput: document.getElementById('leadsInput'),
+            mensagensInput: document.getElementById('mensagensInput'),
+            reunioesInput: document.getElementById('reunioesInput'),
+            propostasInput: document.getElementById('propostasInput'),
+            fechamentosInput: document.getElementById('fechamentosInput'),
+            perdidosInput: document.getElementById('perdidosInput'),
+            
+            // Buttons
+            saveButton: document.getElementById('saveButton'),
+            saveButtonText: document.getElementById('saveButtonText'),
+            mainForm: document.getElementById('mainForm'),
+            searchDashboardBtn: document.getElementById('searchDashboardBtn'),
+            
+            // Indicators
+            offlineIndicator: document.getElementById('offlineIndicator'),
+            connectionStatus: document.getElementById('connectionStatus'),
+            connectionText: document.getElementById('connectionText'),
+            
+            // Database
+            searchInput: document.getElementById('searchInput'),
+            databaseTable: document.getElementById('databaseTable'),
+            
+            // Dashboard
+            searchAdvogado: document.getElementById('searchAdvogado'),
+            selectMonth: document.getElementById('selectMonth'),
+            dashboardStats: document.getElementById('dashboardStats'),
+            dashboardCharts: document.getElementById('dashboardCharts'),
+            dashboardEmpty: document.getElementById('dashboardEmpty'),
+            statLeads: document.getElementById('statLeads'),
+            statFechamentos: document.getElementById('statFechamentos'),
+            statConversao: document.getElementById('statConversao'),
+            statMedia: document.getElementById('statMedia'),
+            detailedTable: document.getElementById('detailedTable'),
+            
+            // Conversion display
+            overallConversion: document.getElementById('overallConversion'),
+            conversionBars: document.getElementById('conversionBars')
+        };
+
+        // Initialize the application
+        function initApp() {
+            // Initialize Firebase
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore(app);
+                
+                // Enable offline persistence
+                db.enablePersistence({ synchronizeTabs: true })
+                    .then(() => {
+                        isFirebaseInitialized = true;
+                        console.log("✅ Firebase Firestore initialized with offline persistence");
+                        updateConnectionStatus(true);
+                        
+                        // Sync any pending entries
+                        if (state.isOnline) {
+                            setTimeout(syncPendingEntries, 1000);
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn("⚠️ Firebase offline persistence error:", err);
+                        isFirebaseInitialized = true;
+                        updateConnectionStatus(true);
+                    });
+            } catch (error) {
+                console.error("❌ Firebase initialization error:", error);
+                updateConnectionStatus(false);
+                showNotification('Erro ao conectar com Firebase. Algumas funcionalidades podem não estar disponíveis.', 'warning');
+            }
+
+            // Set today's date
+            const today = new Date();
+            elements.dataInput.value = today.toISOString().split('T')[0];
+
+            // Load saved lawyer data
+            loadSavedLawyerData();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Initialize conversion dashboard
+            updateConversionDashboard();
+
+            // Initialize with form tab
+            switchTab('form');
+        }
+
+        // Load saved lawyer data from localStorage
+        function loadSavedLawyerData() {
+            const savedLawyer = localStorage.getItem('adveasy_identity');
+            if (savedLawyer) {
+                try {
+                    const { nome, documento } = JSON.parse(savedLawyer);
+                    if (nome) elements.nomeInput.value = nome;
+                    if (documento) elements.documentoInput.value = documento;
+                } catch (e) {
+                    localStorage.removeItem('adveasy_identity');
+                }
+            }
+        }
+
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Save lawyer data on change
+            elements.nomeInput.addEventListener('input', saveLawyerData);
+            elements.documentoInput.addEventListener('input', saveLawyerData);
+
+            // Tab switching
+            elements.tabForm.addEventListener('click', () => switchTab('form'));
+            elements.tabDatabase.addEventListener('click', () => switchTab('database'));
+            elements.tabDashboard.addEventListener('click', () => switchTab('dashboard'));
+
+            // Metric inputs
+            const metricInputs = ['leadsInput', 'mensagensInput', 'reunioesInput', 'propostasInput', 'fechamentosInput', 'perdidosInput'];
+            metricInputs.forEach(inputId => {
+                elements[inputId].addEventListener('input', function() {
+                    const metricKey = inputId.replace('Input', '');
+                    const value = parseInt(this.value) || 0;
+                    state.metrics[metricKey] = Math.max(0, value);
+                    updateConversionDashboard();
+                });
+            });
+
+            // Form submission
+            elements.mainForm.addEventListener('submit', handleFormSubmit);
+
+            // Database search
+            elements.searchInput.addEventListener('input', function() {
+                state.searchTerm = this.value;
+                renderDatabaseEntries();
+            });
+
+            // Dashboard search
+            elements.searchDashboardBtn.addEventListener('click', searchDashboardData);
+            elements.searchAdvogado.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchDashboardData();
+                }
+            });
+
+            // Online/offline detection
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+        }
+
+        // Save lawyer data to localStorage
+        function saveLawyerData() {
+            const nome = elements.nomeInput.value.trim();
+            const documento = elements.documentoInput.value.trim();
+            if (nome || documento) {
+                localStorage.setItem('adveasy_identity', JSON.stringify({ nome, documento }));
+            }
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            state.activeTab = tab;
+            
+            // Update tab styles
+            elements.tabForm.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition text-slate-400 hover:text-primary whitespace-nowrap';
+            elements.tabDatabase.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition text-slate-400 hover:text-primary whitespace-nowrap';
+            elements.tabDashboard.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition text-slate-400 hover:text-primary whitespace-nowrap';
+            
+            // Hide all content
+            elements.formContent.classList.add('hidden');
+            elements.databaseContent.classList.add('hidden');
+            elements.dashboardContent.classList.add('hidden');
+            
+            // Activate selected tab
+            if (tab === 'form') {
+                elements.tabForm.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition bg-white text-primary tab-shadow border-x border-t border-slate-200 whitespace-nowrap';
+                elements.formContent.classList.remove('hidden');
+                elements.formContent.classList.add('animate-fade-in');
+            } else if (tab === 'database') {
+                elements.tabDatabase.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition bg-white text-primary tab-shadow border-x border-t border-slate-200 whitespace-nowrap';
+                elements.databaseContent.classList.remove('hidden');
+                elements.databaseContent.classList.add('animate-fade-in');
+                loadDatabaseEntries();
+            } else if (tab === 'dashboard') {
+                elements.tabDashboard.className = 'flex items-center gap-2 px-6 py-3 rounded-t-2xl font-black uppercase tracking-tighter text-sm smooth-transition bg-white text-primary tab-shadow border-x border-t border-slate-200 whitespace-nowrap';
+                elements.dashboardContent.classList.remove('hidden');
+                elements.dashboardContent.classList.add('animate-fade-in');
+                populateMonthSelect();
+            }
+        }
+
+        // Calculate conversion metrics
+        function calculateConversions() {
+            const safeDiv = (a, b) => {
+                if (b === 0) return 0;
+                return (a / b) * 100;
+            };
+            
+            return {
+                leadsToMessages: safeDiv(state.metrics.mensagens, state.metrics.leads),
+                messagesToMeetings: safeDiv(state.metrics.reunioes, state.metrics.mensagens),
+                meetingsToProposals: safeDiv(state.metrics.propostas, state.metrics.reunioes),
+                proposalsToClosures: safeDiv(state.metrics.fechamentos, state.metrics.propostas),
+                lostRate: safeDiv(state.metrics.perdidos, state.metrics.leads),
+                overallConversion: safeDiv(state.metrics.fechamentos, state.metrics.leads),
+            };
+        }
+
+        // Update conversion dashboard
+        function updateConversionDashboard() {
+            const conversions = calculateConversions();
+            
+            // Update overall conversion
+            elements.overallConversion.textContent = conversions.overallConversion.toFixed(1) + '%';
+            
+            // Update conversion bars
+            const conversionItems = [
+                { label: 'Leads → Mensagens', val: conversions.leadsToMessages },
+                { label: 'Mensagens → Reuniões', val: conversions.messagesToMeetings },
+                { label: 'Reuniões → Propostas', val: conversions.meetingsToProposals },
+                { label: 'Propostas → Contratos', val: conversions.proposalsToClosures },
+                { label: 'Taxa de Leads Perdidos', val: conversions.lostRate, color: 'bg-rose-400' },
+            ];
+            
+            elements.conversionBars.innerHTML = conversionItems.map((item, i) => `
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase tracking-wider opacity-70">${item.label}</span>
+                        <span class="font-black text-sm">${item.val.toFixed(1)}%</span>
+                    </div>
+                    <div class="h-1.5 ${item.color ? 'bg-white/10' : 'bg-white/10'} rounded-full overflow-hidden">
+                        <div 
+                            class="h-full ${item.color ? 'bg-rose-400' : 'bg-accent'} rounded-full smooth-transition"
+                            style="width: ${Math.min(item.val, 100)}%"
+                        ></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const nome = elements.nomeInput.value.trim();
+            const documento = elements.documentoInput.value.trim().replace(/\D/g, '');
+            const data = elements.dataInput.value;
+            
+            if (!nome || !documento || !data) {
+                showNotification('Por favor, preencha todos os campos de identificação.', 'warning');
+                return;
+            }
+
+            // Update state metrics from inputs
+            state.metrics.leads = parseInt(elements.leadsInput.value) || 0;
+            state.metrics.mensagens = parseInt(elements.mensagensInput.value) || 0;
+            state.metrics.reunioes = parseInt(elements.reunioesInput.value) || 0;
+            state.metrics.propostas = parseInt(elements.propostasInput.value) || 0;
+            state.metrics.fechamentos = parseInt(elements.fechamentosInput.value) || 0;
+            state.metrics.perdidos = parseInt(elements.perdidosInput.value) || 0;
+
+            state.saving = true;
+            elements.saveButton.disabled = true;
+            elements.saveButtonText.textContent = 'Salvando...';
+            elements.saveButton.innerHTML = '<i class="fas fa-spinner animate-spin text-sm sm:text-base"></i><span id="saveButtonText">Salvando...</span>';
+            
+            try {
+                const entry = {
+                    advogado: { 
+                        nome: nome,
+                        documento: documento
+                    },
+                    data: data,
+                    leads: state.metrics.leads,
+                    mensagens: state.metrics.mensagens,
+                    reunioes: state.metrics.reunioes,
+                    propostas: state.metrics.propostas,
+                    fechamentos: state.metrics.fechamentos,
+                    perdidos: state.metrics.perdidos,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                };
+                
+                // Create a unique document ID
+                const docId = `${documento}_${data}`;
+                
+                console.log("📝 Salvando registro no Firebase:", entry);
+                
+                // Save to Firebase
+                await db.collection('registros_funil').doc(docId).set(entry, { merge: true });
+                
+                console.log("✅ Registro salvo com sucesso!");
+                
+                // Show success
+                elements.saveButton.innerHTML = '<i class="fas fa-check text-sm sm:text-base"></i><span id="saveButtonText">Salvo com Sucesso!</span>';
+                elements.saveButton.classList.remove('bg-accent', 'hover:bg-[#8c6e07]');
+                elements.saveButton.classList.add('animate-pulse-success');
+                
+                showNotification('Dados salvos com sucesso! Redirecionando para Base de Dados...', 'success');
+                
+                // Clear form and switch to database tab after 2 seconds
+                setTimeout(() => {
+                    // Reset button
+                    elements.saveButton.innerHTML = '<i class="fas fa-save text-sm sm:text-base"></i><span id="saveButtonText">Salvar Dados Diários</span>';
+                    elements.saveButton.classList.remove('animate-pulse-success');
+                    elements.saveButton.classList.add('bg-accent', 'hover:bg-[#8c6e07]');
+                    elements.saveButton.disabled = false;
+                    elements.saveButtonText.textContent = 'Salvar Dados Diários';
+                    
+                    // Clear form metrics (keep lawyer info)
+                    resetFormMetrics();
+                    
+                    // Switch to database tab to see the saved entry
+                    switchTab('database');
+                    
+                }, 2000);
+                
+            } catch (error) {
+                console.error("❌ Erro ao salvar no Firebase:", error);
+                
+                // Save to localStorage for offline sync
+                saveToLocalStorage(nome, documento, data, state.metrics);
+                
+                elements.saveButton.innerHTML = '<i class="fas fa-save text-sm sm:text-base"></i><span id="saveButtonText">Salvar Dados Diários</span>';
+                elements.saveButton.disabled = false;
+                elements.saveButtonText.textContent = 'Salvar Dados Diários';
+            } finally {
+                state.saving = false;
+            }
+        }
+
+        // Reset form metrics (keep lawyer info)
+        function resetFormMetrics() {
+            state.metrics = {
+                leads: 0,
+                mensagens: 0,
+                reunioes: 0,
+                propostas: 0,
+                fechamentos: 0,
+                perdidos: 0
+            };
+            
+            ['leadsInput', 'mensagensInput', 'reunioesInput', 'propostasInput', 'fechamentosInput', 'perdidosInput'].forEach(id => {
+                elements[id].value = '0';
+            });
+            
+            // Update date to today
+            const today = new Date();
+            elements.dataInput.value = today.toISOString().split('T')[0];
+            
+            updateConversionDashboard();
+        }
+
+        // Save to localStorage when offline
+        function saveToLocalStorage(nome, documento, data, metrics) {
+            const pendingEntries = JSON.parse(localStorage.getItem('pending_firebase_entries') || '[]');
+            const entry = {
+                advogado: { nome, documento },
+                data,
+                ...metrics,
+                timestamp: new Date().toISOString(),
+                isPending: true
+            };
+            pendingEntries.push(entry);
+            localStorage.setItem('pending_firebase_entries', JSON.stringify(pendingEntries));
+            showNotification('Dados salvos localmente. Serão sincronizados quando online.', 'info');
+        }
+
+        // Sync pending entries when online
+        async function syncPendingEntries() {
+            const pendingEntries = JSON.parse(localStorage.getItem('pending_firebase_entries') || '[]');
+            if (pendingEntries.length > 0 && isFirebaseInitialized && state.isOnline) {
+                console.log(`🔄 Sincronizando ${pendingEntries.length} entradas pendentes...`);
+                
+                for (const entry of pendingEntries) {
+                    try {
+                        const docId = `${entry.advogado.documento}_${entry.data}`;
+                        await db.collection('registros_funil').doc(docId).set({
+                            ...entry,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        }, { merge: true });
+                        console.log(`✅ Sincronizado: ${docId}`);
+                    } catch (error) {
+                        console.error(`❌ Erro ao sincronizar ${entry.data}:`, error);
+                    }
+                }
+                
+                // Clear synced entries
+                localStorage.removeItem('pending_firebase_entries');
+                
+                // Reload database entries if on database tab
+                if (state.activeTab === 'database') {
+                    loadDatabaseEntries();
+                }
+            }
+        }
+
+        // Load database entries
+        async function loadDatabaseEntries() {
+            if (!isFirebaseInitialized) {
+                showDatabaseMessage('Aguardando conexão com Firebase...');
+                return;
+            }
+            
+            state.loadingDb = true;
+            showDatabaseLoading();
+            
+            try {
+                console.log("📥 Carregando registros do Firebase...");
+                
+                // Get data from Firebase
+                const querySnapshot = await db.collection('registros_funil')
+                    .orderBy('data', 'desc')
+                    .limit(100)
+                    .get();
+                
+                state.allEntries = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    state.allEntries.push({
+                        ...data,
+                        id: doc.id,
+                        isPending: false
+                    });
+                });
+                
+                console.log(`✅ ${state.allEntries.length} registros carregados do Firebase`);
+                
+                // Check for pending local entries
+                const pendingEntries = JSON.parse(localStorage.getItem('pending_firebase_entries') || '[]');
+                if (pendingEntries.length > 0) {
+                    console.log(`📋 ${pendingEntries.length} registros pendentes locais`);
+                    // Add pending entries to the beginning
+                    state.allEntries = [...pendingEntries, ...state.allEntries];
+                }
+                
+                renderDatabaseEntries();
+            } catch (error) {
+                console.error("❌ Erro ao carregar registros:", error);
+                
+                // Load from localStorage as fallback
+                const pendingEntries = JSON.parse(localStorage.getItem('pending_firebase_entries') || '[]');
+                if (pendingEntries.length > 0) {
+                    showDatabaseMessage(`${pendingEntries.length} registros locais (modo offline)`);
+                    state.allEntries = pendingEntries;
+                    renderDatabaseEntries();
+                } else {
+                    showDatabaseMessage('Erro ao carregar registros. Verifique sua conexão.');
+                }
+            } finally {
+                state.loadingDb = false;
+            }
+        }
+
+        // Render database entries
+        function renderDatabaseEntries() {
+            const searchTerm = state.searchTerm.toLowerCase();
+            const filteredEntries = searchTerm 
+                ? state.allEntries.filter(e => 
+                    (e.advogado.nome && e.advogado.nome.toLowerCase().includes(searchTerm)) || 
+                    (e.advogado.documento && e.advogado.documento.includes(searchTerm)) ||
+                    (e.data && e.data.includes(searchTerm))
+                  )
+                : state.allEntries;
+            
+            if (filteredEntries.length === 0) {
+                showDatabaseMessage('Nenhum registro encontrado');
+                return;
+            }
+            
+            const entriesHtml = filteredEntries.map((entry, idx) => {
+                const overall = (entry.fechamentos / (entry.leads || 1)) * 100;
+                const lost = (entry.perdidos / (entry.leads || 1)) * 100;
+                const formattedDate = entry.data ? formatDate(entry.data) : 'N/A';
+                
+                return `
+                    <tr class="group ${entry.isPending ? 'bg-amber-50' : 'bg-slate-50'} hover:bg-white border border-transparent hover:border-slate-100 hover:shadow-md smooth-transition rounded-2xl overflow-hidden">
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 first:rounded-l-2xl">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black ${entry.isPending ? 'text-amber-600' : 'text-slate-500'}">${formattedDate}</span>
+                                ${entry.isPending ? '<span class="text-[8px] font-black uppercase bg-amber-100 text-amber-700 px-2 py-1 rounded">Pendente</span>' : ''}
+                            </div>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5">
+                            <div>
+                                <p class="text-sm font-black text-slate-800 tracking-tight">${entry.advogado.nome || 'N/A'}</p>
+                                <p class="text-[9px] font-bold text-slate-400 font-mono">${entry.advogado.documento || 'N/A'}</p>
+                            </div>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                            <span class="text-sm font-black text-slate-700">${entry.leads || 0}</span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                            <span class="text-sm font-black text-emerald-600">${entry.fechamentos || 0}</span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                            <span class="text-[11px] font-black ${lost > 30 ? 'text-rose-500' : 'text-slate-400'}">
+                                ${isNaN(lost) ? '0.0' : lost.toFixed(1)}%
+                            </span>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                            <div class="inline-flex items-center justify-center bg-primary/10 text-primary px-2 sm:px-3 py-1 rounded-full text-xs font-black">
+                                ${isNaN(overall) ? '0.0' : overall.toFixed(1)}%
+                            </div>
+                        </td>
+                        <td class="px-4 sm:px-6 py-3 sm:py-5 text-right last:rounded-r-2xl">
+                            <button 
+                                onclick="loadEntryData('${escapeHtml(entry.advogado.nome || '')}', '${entry.advogado.documento || ''}', '${entry.data || ''}', ${entry.leads || 0}, ${entry.mensagens || 0}, ${entry.reunioes || 0}, ${entry.propostas || 0}, ${entry.fechamentos || 0}, ${entry.perdidos || 0})"
+                                class="p-2 text-slate-300 hover:text-primary hover:bg-primary/5 rounded-xl smooth-transition"
+                                title="Carregar dados"
+                            >
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            elements.databaseTable.innerHTML = `
+                <div class="overflow-x-auto -mx-4 sm:mx-0">
+                    <table class="w-full text-left border-separate border-spacing-y-2 sm:border-spacing-y-4">
+                        <thead>
+                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th class="px-4 sm:px-6 pb-2">Data</th>
+                                <th class="px-4 sm:px-6 pb-2">Advogado</th>
+                                <th class="px-4 sm:px-6 pb-2 text-center">Leads</th>
+                                <th class="px-4 sm:px-6 pb-2 text-center">Contratos</th>
+                                <th class="px-4 sm:px-6 pb-2 text-center">Perda %</th>
+                                <th class="px-4 sm:px-6 pb-2 text-center text-primary">Conversão G.</th>
+                                <th class="px-4 sm:px-6 pb-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${entriesHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Global function to load entry data into form
+        window.loadEntryData = function(nome, documento, data, leads, mensagens, reunioes, propostas, fechamentos, perdidos) {
+            elements.nomeInput.value = nome;
+            elements.documentoInput.value = documento;
+            
+            // Convert date format if needed
+            if (data && data.includes('/')) {
+                // Convert from DD/MM/YYYY to YYYY-MM-DD
+                const [day, month, year] = data.split('/');
+                elements.dataInput.value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else {
+                elements.dataInput.value = data;
+            }
+            
+            elements.leadsInput.value = leads;
+            elements.mensagensInput.value = mensagens;
+            elements.reunioesInput.value = reunioes;
+            elements.propostasInput.value = propostas;
+            elements.fechamentosInput.value = fechamentos;
+            elements.perdidosInput.value = perdidos;
+            
+            // Update state
+            state.metrics = { leads, mensagens, reunioes, propostas, fechamentos, perdidos };
+            updateConversionDashboard();
+            
+            // Switch to form tab
+            switchTab('form');
+            
+            showNotification('Dados carregados para edição!', 'info');
+        };
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showDatabaseLoading() {
+            elements.databaseTable.innerHTML = `
+                <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <i class="fas fa-spinner animate-spin text-primary text-2xl"></i>
+                    <span class="text-xs font-black uppercase tracking-[0.2em]">Carregando registros...</span>
+                </div>
+            `;
+        }
+
+        function showDatabaseMessage(message) {
+            elements.databaseTable.innerHTML = `
+                <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <i class="fas fa-database text-4xl opacity-10"></i>
+                    <span class="text-sm font-black uppercase tracking-widest text-slate-400">${message}</span>
+                </div>
+            `;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            if (dateStr.includes('/')) return dateStr; // Already formatted
+            
+            const [year, month, day] = dateStr.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        // Dashboard functionality
+        function populateMonthSelect() {
+            const months = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            
+            const currentYear = new Date().getFullYear();
+            let options = '<option value="">Todos os meses</option>';
+            
+            // Add current and previous 5 months
+            for (let i = 0; i < 6; i++) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const monthName = months[month];
+                const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+                
+                options += `<option value="${value}">${monthName}/${year}</option>`;
+            }
+            
+            elements.selectMonth.innerHTML = options;
+        }
+
+        // Search dashboard data
+        async function searchDashboardData() {
+            const searchTerm = elements.searchAdvogado.value.trim();
+            const selectedMonth = elements.selectMonth.value;
+            
+            if (!searchTerm) {
+                showNotification('Digite o nome ou documento do advogado para buscar.', 'warning');
+                return;
+            }
+            
+            // Show loading
+            elements.dashboardEmpty.classList.add('hidden');
+            elements.dashboardStats.classList.add('hidden');
+            elements.dashboardCharts.classList.add('hidden');
+            
+            const loadingHtml = `
+                <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                    <i class="fas fa-spinner animate-spin text-primary text-2xl"></i>
+                    <span class="text-xs font-black uppercase tracking-[0.2em]">Buscando dados do advogado...</span>
+                </div>
+            `;
+            elements.dashboardEmpty.innerHTML = loadingHtml;
+            elements.dashboardEmpty.classList.remove('hidden');
+            
+            try {
+                // Load entries if not loaded
+                if (state.allEntries.length === 0) {
+                    await loadDatabaseEntries();
+                }
+                
+                // Filter by lawyer name or document
+                let filteredEntries = state.allEntries.filter(entry => 
+                    (entry.advogado.nome && entry.advogado.nome.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (entry.advogado.documento && entry.advogado.documento.includes(searchTerm))
+                );
+                
+                // Filter by month if selected
+                if (selectedMonth) {
+                    filteredEntries = filteredEntries.filter(entry => 
+                        entry.data && entry.data.startsWith(selectedMonth)
+                    );
+                }
+                
+                // Sort by date
+                filteredEntries.sort((a, b) => {
+                    const dateA = new Date(a.data || 0);
+                    const dateB = new Date(b.data || 0);
+                    return dateA - dateB;
+                });
+                
+                state.dashboardData.entries = filteredEntries;
+                state.dashboardData.filteredEntries = filteredEntries;
+                
+                if (filteredEntries.length === 0) {
+                    elements.dashboardEmpty.innerHTML = `
+                        <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                            <i class="fas fa-user-slash text-4xl opacity-10"></i>
+                            <span class="text-sm font-black uppercase tracking-widest text-slate-400">Nenhum dado encontrado para "${searchTerm}"</span>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Calculate statistics
+                const totalLeads = filteredEntries.reduce((sum, entry) => sum + (entry.leads || 0), 0);
+                const totalFechamentos = filteredEntries.reduce((sum, entry) => sum + (entry.fechamentos || 0), 0);
+                const totalConversao = totalLeads > 0 ? (totalFechamentos / totalLeads * 100) : 0;
+                const mediaDiaria = filteredEntries.length > 0 ? (totalFechamentos / filteredEntries.length) : 0;
+                
+                // Update stats
+                elements.statLeads.textContent = totalLeads.toLocaleString();
+                elements.statFechamentos.textContent = totalFechamentos.toLocaleString();
+                elements.statConversao.textContent = totalConversao.toFixed(1) + '%';
+                elements.statMedia.textContent = mediaDiaria.toFixed(1);
+                
+                // Show dashboard
+                elements.dashboardEmpty.classList.add('hidden');
+                elements.dashboardStats.classList.remove('hidden');
+                elements.dashboardCharts.classList.remove('hidden');
+                
+                // Update charts
+                updateDashboardCharts();
+                updateDetailedTable();
+                
+            } catch (error) {
+                console.error('Erro ao buscar dados do dashboard:', error);
+                elements.dashboardEmpty.innerHTML = `
+                    <div class="py-32 flex flex-col items-center justify-center text-slate-300 gap-4">
+                        <i class="fas fa-exclamation-triangle text-4xl opacity-10"></i>
+                        <span class="text-sm font-black uppercase tracking-widest text-slate-400">Erro ao buscar dados. Tente novamente.</span>
+                    </div>
+                `;
+            }
+        }
+
+        function updateDashboardCharts() {
+            const entries = state.dashboardData.filteredEntries;
+            
+            // Prepare data for charts
+            const dates = entries.map(e => formatDate(e.data));
+            const leads = entries.map(e => e.leads || 0);
+            const fechamentos = entries.map(e => e.fechamentos || 0);
+            
+            // Calculate conversion rates
+            const conversionRates = entries.map(e => {
+                return e.leads > 0 ? (e.fechamentos / e.leads * 100) : 0;
+            });
+            
+            // Destroy existing charts if they exist
+            if (leadsChart) {
+                leadsChart.destroy();
+            }
+            if (conversionChart) {
+                conversionChart.destroy();
+            }
+            
+            // Leads and Contracts Chart
+            const leadsCtx = document.getElementById('leadsChart').getContext('2d');
+            leadsChart = new Chart(leadsCtx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Leads Recebidos',
+                            data: leads,
+                            borderColor: '#0d243c',
+                            backgroundColor: 'rgba(13, 36, 60, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Contratos Fechados',
+                            data: fechamentos,
+                            borderColor: '#ad8609',
+                            backgroundColor: 'rgba(173, 134, 9, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Quantidade'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Conversion Chart
+            const conversionCtx = document.getElementById('conversionChart').getContext('2d');
+            conversionChart = new Chart(conversionCtx, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Taxa de Conversão %',
+                            data: conversionRates,
+                            backgroundColor: '#ad8609',
+                            borderColor: '#8c6e07',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Porcentagem %'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDetailedTable() {
+            const entries = state.dashboardData.filteredEntries;
+            
+            const tableHtml = `
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left border-b border-slate-300">
+                            <th class="pb-2 font-black text-primary text-xs uppercase">Data</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Leads</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">1º Contato</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Reuniões</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Propostas</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Contratos</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Perdidos</th>
+                            <th class="pb-2 font-black text-primary text-xs uppercase text-center">Conversão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${entries.map(entry => {
+                            const conversao = entry.leads > 0 ? (entry.fechamentos / entry.leads * 100) : 0;
+                            return `
+                                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                                    <td class="py-3 font-semibold">${formatDate(entry.data)}</td>
+                                    <td class="py-3 text-center font-black">${entry.leads || 0}</td>
+                                    <td class="py-3 text-center">${entry.mensagens || 0}</td>
+                                    <td class="py-3 text-center">${entry.reunioes || 0}</td>
+                                    <td class="py-3 text-center">${entry.propostas || 0}</td>
+                                    <td class="py-3 text-center font-black text-emerald-600">${entry.fechamentos || 0}</td>
+                                    <td class="py-3 text-center font-black ${entry.perdidos > 0 ? 'text-rose-500' : 'text-slate-400'}">${entry.perdidos || 0}</td>
+                                    <td class="py-3 text-center font-black ${conversao > 20 ? 'text-emerald-600' : conversao > 10 ? 'text-amber-600' : 'text-rose-500'}">${conversao.toFixed(1)}%</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            elements.detailedTable.innerHTML = tableHtml;
+        }
+
+        // Connection status functions
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                elements.connectionStatus.className = 'w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]';
+                elements.connectionText.textContent = 'Conectado';
+                elements.offlineIndicator.classList.add('hidden');
+                
+                // Sync pending entries when connection is restored
+                if (state.isOnline) {
+                    setTimeout(syncPendingEntries, 1000);
+                }
+            } else {
+                elements.connectionStatus.className = 'w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+                elements.connectionText.textContent = 'Desconectado';
+            }
+        }
+
+        function handleOnline() {
+            state.isOnline = true;
+            updateConnectionStatus(true);
+            showNotification('Conexão restaurada. Sincronizando dados...', 'success');
+            
+            // Force reload database entries if on database tab
+            if (state.activeTab === 'database') {
+                loadDatabaseEntries();
+            }
+        }
+
+        function handleOffline() {
+            state.isOnline = false;
+            updateConnectionStatus(false);
+            showNotification('Você está offline. Os dados serão salvos localmente.', 'warning');
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            // Remove existing notification
+            const existingNotification = document.querySelector('.custom-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            const colors = {
+                success: 'bg-emerald-500',
+                error: 'bg-rose-500',
+                warning: 'bg-amber-500',
+                info: 'bg-primary'
+            };
+            
+            const icon = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `custom-notification fixed top-24 right-4 ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg z-50 max-w-sm smooth-transition animate-fade-in`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas ${icon[type]}"></i>
+                    <span class="text-sm font-semibold">${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-4');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Initialize offline status
+        if (!navigator.onLine) {
+            state.isOnline = false;
+            updateConnectionStatus(false);
+        }
+    </script>
+</body>
+</html>
