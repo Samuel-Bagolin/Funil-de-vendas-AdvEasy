@@ -442,11 +442,11 @@
 
             <div id="dashboardCharts" class="hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200" style="height: 400px;">
                         <h3 class="font-black text-primary text-sm uppercase tracking-wider mb-4">Evolução de Leads e Contratos</h3>
                         <canvas id="leadsChart" height="250"></canvas>
                     </div>
-                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+                    <div class="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200" style="height: 400px;">
                         <h3 class="font-black text-primary text-sm uppercase tracking-wider mb-4">Taxas de Conversão por Etapa</h3>
                         <canvas id="conversionChart" height="250"></canvas>
                     </div>
@@ -1040,13 +1040,22 @@
                             </div>
                         </td>
                         <td class="px-4 sm:px-6 py-3 sm:py-5 text-right last:rounded-r-2xl">
-                            <button 
-                                onclick="loadEntryData('${escapeHtml(entry.advogado.nome || '')}', '${entry.advogado.documento || ''}', '${entry.data || ''}', ${entry.leads || 0}, ${entry.mensagens || 0}, ${entry.reunioes || 0}, ${entry.propostas || 0}, ${entry.fechamentos || 0}, ${entry.perdidos || 0})"
-                                class="p-2 text-slate-300 hover:text-primary hover:bg-primary/5 rounded-xl smooth-transition"
-                                title="Carregar dados"
-                            >
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                            <div class="flex items-center justify-end gap-2">
+                                <button 
+                                    onclick="loadEntryData('${escapeHtml(entry.advogado.nome || '')}', '${entry.advogado.documento || ''}', '${entry.data || ''}', ${entry.leads || 0}, ${entry.mensagens || 0}, ${entry.reunioes || 0}, ${entry.propostas || 0}, ${entry.fechamentos || 0}, ${entry.perdidos || 0})"
+                                    class="p-2 text-slate-300 hover:text-primary hover:bg-primary/5 rounded-xl smooth-transition"
+                                    title="Carregar dados"
+                                >
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button 
+                                    onclick="deleteEntry('${entry.id || entry.advogado.documento + '_' + entry.data}', '${escapeHtml(entry.advogado.nome || '')}', '${formattedDate}')"
+                                    class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl smooth-transition"
+                                    title="Excluir"
+                                >
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1063,7 +1072,7 @@
                                 <th class="px-4 sm:px-6 pb-2 text-center">Contratos</th>
                                 <th class="px-4 sm:px-6 pb-2 text-center">Perda %</th>
                                 <th class="px-4 sm:px-6 pb-2 text-center text-primary">Conversão G.</th>
-                                <th class="px-4 sm:px-6 pb-2"></th>
+                                <th class="px-4 sm:px-6 pb-2 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1073,6 +1082,45 @@
                 </div>
             `;
         }
+
+        // Função para excluir entrada
+        window.deleteEntry = async function(id, nome, data) {
+            if (!confirm(`Tem certeza que deseja excluir o registro de ${nome} em ${data}?`)) {
+                return;
+            }
+            
+            try {
+                // Tenta excluir do Firebase
+                if (isFirebaseInitialized) {
+                    await db.collection('registros_funil').doc(id).delete();
+                    console.log(`✅ Registro ${id} excluído do Firebase`);
+                }
+                
+                // Remove do estado local
+                state.allEntries = state.allEntries.filter(entry => 
+                    entry.id !== id && 
+                    `${entry.advogado.documento}_${entry.data}` !== id
+                );
+                
+                // Remove do localStorage se for pendente
+                const pendingEntries = JSON.parse(localStorage.getItem('pending_firebase_entries') || '[]');
+                const filteredPending = pendingEntries.filter(entry => 
+                    `${entry.advogado.documento}_${entry.data}` !== id
+                );
+                
+                if (filteredPending.length !== pendingEntries.length) {
+                    localStorage.setItem('pending_firebase_entries', JSON.stringify(filteredPending));
+                }
+                
+                // Atualiza a visualização
+                renderDatabaseEntries();
+                
+                showNotification('Registro excluído com sucesso!', 'success');
+            } catch (error) {
+                console.error('❌ Erro ao excluir registro:', error);
+                showNotification('Erro ao excluir registro.', 'error');
+            }
+        };
 
         // Global function to load entry data into form
         window.loadEntryData = function(nome, documento, data, leads, mensagens, reunioes, propostas, fechamentos, perdidos) {
@@ -1265,6 +1313,10 @@
         function updateDashboardCharts() {
             const entries = state.dashboardData.filteredEntries;
             
+            if (entries.length === 0) {
+                return;
+            }
+            
             // Prepare data for charts
             const dates = entries.map(e => formatDate(e.data));
             const leads = entries.map(e => e.leads || 0);
@@ -1329,6 +1381,12 @@
                                 display: true,
                                 text: 'Quantidade'
                             }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
                         }
                     }
                 }
@@ -1365,6 +1423,12 @@
                             title: {
                                 display: true,
                                 text: 'Porcentagem %'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
                             }
                         }
                     }
